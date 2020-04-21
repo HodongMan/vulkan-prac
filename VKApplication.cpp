@@ -4,6 +4,7 @@
 VKApplication::VKApplication( void )
 	: _window{ nullptr }
 	, _vkInstance{ nullptr }
+	, _physicalDevice{ VK_NULL_HANDLE  }
 {
 
 }
@@ -23,7 +24,17 @@ void VKApplication::run( void ) noexcept
 
 bool VKApplication::initializeVKApplication( void ) noexcept
 {
-	return createVKInstance();
+	if ( false == createVKInstance() )
+	{
+		return false;
+	}
+
+	if ( false == pickPhysicalDevice() )
+	{
+		return false;
+	}
+
+	return true;
 }
 
 bool VKApplication::createVKInstance( void ) noexcept
@@ -58,6 +69,70 @@ bool VKApplication::createVKInstance( void ) noexcept
 	return true;
 }
 
+bool VKApplication::pickPhysicalDevice( void ) noexcept
+{
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices( _vkInstance, &deviceCount, nullptr );
+
+	if ( 0 == deviceCount )
+	{
+		return false;
+	}
+
+	std::vector<VkPhysicalDevice> devices( deviceCount );
+	vkEnumeratePhysicalDevices( _vkInstance, &deviceCount, devices.data() );
+
+	for ( const auto& device : devices )
+	{
+		if ( true == isDeviceSuitable( device ) )
+		{
+			_physicalDevice = device;
+			break;
+		}
+	}
+
+	if ( VK_NULL_HANDLE == _physicalDevice )
+	{
+		return false;
+	}
+}
+
+bool VKApplication::isDeviceSuitable( const VkPhysicalDevice device ) const noexcept
+{
+	QueueFamilyIndices indices = findQueueFamilies( device );
+
+	return indices.isComplete();
+}
+
+QueueFamilyIndices VKApplication::findQueueFamilies( const VkPhysicalDevice device ) const noexcept
+{
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
+
+	std::vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
+	vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, queueFamilies.data() );
+
+	int ii = 0;
+    for ( const auto& queueFamily : queueFamilies )
+	{
+        if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+		{
+            indices._graphicsFamily = ii;
+        }
+
+        if ( true == indices.isComplete() )
+		{
+            break;
+        }
+
+        ii++;
+    }
+
+	return indices;
+}
+
 void VKApplication::initializeWindow( void ) noexcept
 {
 	const uint32_t WIDTH	= 800;
@@ -71,7 +146,7 @@ void VKApplication::initializeWindow( void ) noexcept
 	_window = glfwCreateWindow( WIDTH, HEIGHT, "Vulkan", nullptr, nullptr );
 }
 
-void VKApplication::runLoop( void ) noexcept
+void VKApplication::runLoop( void ) const noexcept
 {
 	while ( !glfwWindowShouldClose( _window ) )
 	{
