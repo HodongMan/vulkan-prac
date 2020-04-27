@@ -34,6 +34,11 @@ bool VKApplication::initializeVKApplication( void ) noexcept
 		return false;
 	}
 
+	if ( false == createLogicalDevice() )
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -131,6 +136,38 @@ QueueFamilyIndices VKApplication::findQueueFamilies( const VkPhysicalDevice devi
     }
 
 	return indices;
+}
+
+bool VKApplication::createLogicalDevice( void ) noexcept
+{
+	QueueFamilyIndices indices = findQueueFamilies( _physicalDevice );
+	
+	VkDeviceQueueCreateInfo queueCreateInfo{};
+	queueCreateInfo.sType				= VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo.queueFamilyIndex	= indices._graphicsFamily.value();
+	queueCreateInfo.queueCount			= 1;
+
+	const float queuePriority			= 1.0f;
+	queueCreateInfo.pQueuePriorities	= &queuePriority;
+
+	VkPhysicalDeviceFeatures deviceFeatures{};
+
+	VkDeviceCreateInfo createInfo{};
+	createInfo.sType					= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pQueueCreateInfos		= &queueCreateInfo;
+	createInfo.queueCreateInfoCount		= 1;
+	createInfo.pEnabledFeatures			= &deviceFeatures;
+	createInfo.enabledExtensionCount	= 0;
+	createInfo.enabledLayerCount		= 0;
+
+	if ( VK_SUCCESS != vkCreateDevice( _physicalDevice, &createInfo, nullptr, &_device ) )
+	{
+		return false;
+	}
+
+	vkGetDeviceQueue( _device, indices._graphicsFamily.value(), 0, &_graphicsQueue );
+
+	return true;
 }
 
 void VKApplication::initializeWindow( void ) noexcept

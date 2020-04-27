@@ -31,10 +31,16 @@ private:
 	bool				isDeviceSuitable( const VkPhysicalDevice device ) const noexcept;
 	QueueFamilyIndices	findQueueFamilies( const VkPhysicalDevice device ) const noexcept;;
 
+	bool				createLogicalDevice( void ) noexcept;
+
 	void				runLoop( void ) const noexcept;
 	void				clean( void ) noexcept;
 
 	GLFWwindow*			_window;
 	VkInstance			_vkInstance;
 	VkPhysicalDevice	_physicalDevice;
+	VkDevice			_device;
+	VkQueue				_graphicsQueue;
+
+
 };
