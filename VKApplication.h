@@ -6,10 +6,11 @@
 struct QueueFamilyIndices
 {
 	std::optional<uint32_t> _graphicsFamily;
+	std::optional<uint32_t> _presentFamily;
 
 	bool isComplete( void ) noexcept
 	{
-		return _graphicsFamily.has_value();
+		return _graphicsFamily.has_value() && _presentFamily.has_value();
 	}
 };
 
@@ -32,6 +33,7 @@ private:
 	QueueFamilyIndices	findQueueFamilies( const VkPhysicalDevice device ) const noexcept;;
 
 	bool				createLogicalDevice( void ) noexcept;
+	bool				createSurface( void ) noexcept;
 
 	void				runLoop( void ) const noexcept;
 	void				clean( void ) noexcept;
@@ -40,7 +42,9 @@ private:
 	VkInstance			_vkInstance;
 	VkPhysicalDevice	_physicalDevice;
 	VkDevice			_device;
+
 	VkQueue				_graphicsQueue;
+	VkQueue				_presentQueue;
 
-
+	VkSurfaceKHR		_surface;
 };

@@ -29,6 +29,11 @@ bool VKApplication::initializeVKApplication( void ) noexcept
 		return false;
 	}
 
+	if ( false == createSurface() )
+	{
+		return false;
+	}
+
 	if ( false == pickPhysicalDevice() )
 	{
 		return false;
@@ -100,6 +105,8 @@ bool VKApplication::pickPhysicalDevice( void ) noexcept
 	{
 		return false;
 	}
+
+	return true;
 }
 
 bool VKApplication::isDeviceSuitable( const VkPhysicalDevice device ) const noexcept
@@ -127,6 +134,15 @@ QueueFamilyIndices VKApplication::findQueueFamilies( const VkPhysicalDevice devi
             indices._graphicsFamily = ii;
         }
 
+		VkBool32 isPresentSupport		= false;
+		vkGetPhysicalDeviceSurfaceSupportKHR( device, ii, _surface, &isPresentSupport );
+
+		if ( true == isPresentSupport )
+		{
+			indices._presentFamily = ii;
+		}
+
+
         if ( true == indices.isComplete() )
 		{
             break;
@@ -141,24 +157,34 @@ QueueFamilyIndices VKApplication::findQueueFamilies( const VkPhysicalDevice devi
 bool VKApplication::createLogicalDevice( void ) noexcept
 {
 	QueueFamilyIndices indices = findQueueFamilies( _physicalDevice );
-	
-	VkDeviceQueueCreateInfo queueCreateInfo{};
-	queueCreateInfo.sType				= VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex	= indices._graphicsFamily.value();
-	queueCreateInfo.queueCount			= 1;
 
-	const float queuePriority			= 1.0f;
-	queueCreateInfo.pQueuePriorities	= &queuePriority;
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	queueCreateInfos.clear();
+
+    std::set<uint32_t> uniqueQueueFamilies		= { indices._graphicsFamily.value(), indices._presentFamily.value() };
+	
+	const float queuePriority = 1.0f;
+	for ( uint32_t queueFamily : uniqueQueueFamilies )
+	{
+            VkDeviceQueueCreateInfo queueCreateInfo{};
+            queueCreateInfo.sType				= VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex	= queueFamily;
+            queueCreateInfo.queueCount			= 1;
+            queueCreateInfo.pQueuePriorities	= &queuePriority;
+            queueCreateInfos.push_back( queueCreateInfo );
+    }
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 
 	VkDeviceCreateInfo createInfo{};
-	createInfo.sType					= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pQueueCreateInfos		= &queueCreateInfo;
-	createInfo.queueCreateInfoCount		= 1;
-	createInfo.pEnabledFeatures			= &deviceFeatures;
-	createInfo.enabledExtensionCount	= 0;
-	createInfo.enabledLayerCount		= 0;
+	createInfo.sType							= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+	createInfo.queueCreateInfoCount				= static_cast<uint32_t>( queueCreateInfos.size() );
+    createInfo.pQueueCreateInfos				= queueCreateInfos.data();
+
+	createInfo.pEnabledFeatures					= &deviceFeatures;
+	createInfo.enabledExtensionCount			= 0;
+	createInfo.enabledLayerCount				= 0;
 
 	if ( VK_SUCCESS != vkCreateDevice( _physicalDevice, &createInfo, nullptr, &_device ) )
 	{
@@ -166,6 +192,17 @@ bool VKApplication::createLogicalDevice( void ) noexcept
 	}
 
 	vkGetDeviceQueue( _device, indices._graphicsFamily.value(), 0, &_graphicsQueue );
+	vkGetDeviceQueue( _device, indices._presentFamily.value(), 0, &_presentQueue );
+
+	return true;
+}
+
+bool VKApplication::createSurface( void ) noexcept
+{
+	if ( VK_SUCCESS != glfwCreateWindowSurface( _vkInstance, _window, nullptr, &_surface ) )
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -193,9 +230,12 @@ void VKApplication::runLoop( void ) const noexcept
 
 void VKApplication::clean( void ) noexcept
 {
+	vkDeviceWaitIdle( _device );
+
+	vkDestroyDevice( _device, nullptr );
+	vkDestroySurfaceKHR( _vkInstance, _surface, nullptr );
 	vkDestroyInstance( _vkInstance, nullptr );
 
 	glfwDestroyWindow( _window );
-
 	glfwTerminate();
 }
