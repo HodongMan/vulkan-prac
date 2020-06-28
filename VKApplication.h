@@ -3,6 +3,15 @@
 
 #include "pch.h"
 
+const uint32_t WIDTH = 800;
+const uint32_t HEIGHT = 600;
+
+const std::vector<const char*> deviceExtensions =
+{
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
+
 struct QueueFamilyIndices
 {
 	std::optional<uint32_t> _graphicsFamily;
@@ -12,6 +21,13 @@ struct QueueFamilyIndices
 	{
 		return _graphicsFamily.has_value() && _presentFamily.has_value();
 	}
+};
+
+struct SwapChainSupportDetails
+{
+	VkSurfaceCapabilitiesKHR			_capabilities;
+	std::vector<VkSurfaceFormatKHR>		_formats;
+	std::vector<VkPresentModeKHR>		_presentModes;
 };
 
 class VKApplication
@@ -25,26 +41,39 @@ public:
 
 private:
 
-	void				initializeWindow( void ) noexcept;
-	bool				initializeVKApplication( void ) noexcept;
-	bool				createVKInstance( void ) noexcept;
-	bool				pickPhysicalDevice( void ) noexcept;
-	bool				isDeviceSuitable( const VkPhysicalDevice device ) const noexcept;
-	QueueFamilyIndices	findQueueFamilies( const VkPhysicalDevice device ) const noexcept;;
+	void					initializeWindow( void ) noexcept;
+	bool					initializeVKApplication( void ) noexcept;
+	bool					createVKInstance( void ) noexcept;
+	bool					pickPhysicalDevice( void ) noexcept;
+	bool					isDeviceSuitable( const VkPhysicalDevice device ) const noexcept;
+	bool					checkDeviceExtensionSupport( const VkPhysicalDevice device ) const noexcept;
 
-	bool				createLogicalDevice( void ) noexcept;
-	bool				createSurface( void ) noexcept;
+	QueueFamilyIndices			findQueueFamilies( const VkPhysicalDevice device ) const noexcept;
+	std::vector<const char*>	getRequiredExtensions( void ) const noexcept;
+	SwapChainSupportDetails		querySwapChainSupport( const VkPhysicalDevice device) const noexcept;
+	VkSurfaceFormatKHR			chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats ) const noexcept;
+	VkPresentModeKHR			chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes ) const noexcept;
+	VkExtent2D					chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities ) const noexcept;
 
-	void				runLoop( void ) const noexcept;
-	void				clean( void ) noexcept;
+	bool					createLogicalDevice( void ) noexcept;
+	bool					createSurface( void ) noexcept;
+	bool					createSwapChain( void ) noexcept;
 
-	GLFWwindow*			_window;
-	VkInstance			_vkInstance;
-	VkPhysicalDevice	_physicalDevice;
-	VkDevice			_device;
+	void					runLoop( void ) const noexcept;
+	void					clean( void ) noexcept;
 
-	VkQueue				_graphicsQueue;
-	VkQueue				_presentQueue;
+	GLFWwindow*				_window;
+	VkInstance				_vkInstance;
+	VkPhysicalDevice		_physicalDevice;
+	VkDevice				_device;
 
-	VkSurfaceKHR		_surface;
+	VkQueue					_graphicsQueue;
+	VkQueue					_presentQueue;
+
+	VkSurfaceKHR			_surface;
+
+	VkSwapchainKHR			_swapchain;
+	std::vector<VkImage>	_swapChainImages;
+	VkFormat				_swapChainImageFormat;
+	VkExtent2D				_swapChainExtent;
 };

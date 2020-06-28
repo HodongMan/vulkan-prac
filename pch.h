@@ -5,7 +5,10 @@
 
 #include <iostream>
 #include <stdexcept>
-#include <cstdlib>
+#include <algorithm>
 #include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <cstdint>
 #include <optional>
-#include <set>
+#include <set>>
