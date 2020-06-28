@@ -55,25 +55,27 @@ private:
 	VkPresentModeKHR			chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes ) const noexcept;
 	VkExtent2D					chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities ) const noexcept;
 
-	bool					createLogicalDevice( void ) noexcept;
-	bool					createSurface( void ) noexcept;
-	bool					createSwapChain( void ) noexcept;
+	bool						createLogicalDevice( void ) noexcept;
+	bool						createSurface( void ) noexcept;
+	bool						createSwapChain( void ) noexcept;
+	bool						createImageViews( void ) noexcept;
 
-	void					runLoop( void ) const noexcept;
-	void					clean( void ) noexcept;
+	void						runLoop( void ) const noexcept;
+	void						clean( void ) noexcept;
 
-	GLFWwindow*				_window;
-	VkInstance				_vkInstance;
-	VkPhysicalDevice		_physicalDevice;
-	VkDevice				_device;
+	GLFWwindow*					_window;
+	VkInstance					_vkInstance;
+	VkPhysicalDevice			_physicalDevice;
+	VkDevice					_device;
 
-	VkQueue					_graphicsQueue;
-	VkQueue					_presentQueue;
+	VkQueue						_graphicsQueue;
+	VkQueue						_presentQueue;
 
-	VkSurfaceKHR			_surface;
+	VkSurfaceKHR				_surface;
 
-	VkSwapchainKHR			_swapchain;
-	std::vector<VkImage>	_swapChainImages;
-	VkFormat				_swapChainImageFormat;
-	VkExtent2D				_swapChainExtent;
+	VkSwapchainKHR				_swapchain;
+	std::vector<VkImage>		_swapChainImages;
+	VkFormat					_swapChainImageFormat;
+	VkExtent2D					_swapChainExtent;
+	std::vector<VkImageView>	_swapChainImageViews;
 };

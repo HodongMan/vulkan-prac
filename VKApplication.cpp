@@ -49,6 +49,11 @@ bool VKApplication::initializeVKApplication( void ) noexcept
 		return false;
 	}
 
+	if ( false == createImageViews() )
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -382,6 +387,38 @@ bool VKApplication::createSwapChain( void ) noexcept
 
 	_swapChainImageFormat						= surfaceFormat.format;
 	_swapChainExtent							= extent;
+
+	return true;
+}
+
+bool VKApplication::createImageViews( void ) noexcept
+{
+	_swapChainImageViews.resize( _swapChainImages.size() );
+	const int count = static_cast<int>( _swapChainImages.size() );
+
+	for ( int ii = 0; ii < count; ++ii)
+	{
+		VkImageViewCreateInfo createInfo{};
+		
+		createInfo.sType							= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image							= _swapChainImages[ii];
+		createInfo.viewType							= VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.format							= _swapChainImageFormat;
+		createInfo.components.r						= VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g						= VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b						= VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a						= VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.subresourceRange.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.baseMipLevel	= 0;
+		createInfo.subresourceRange.levelCount		= 1;
+		createInfo.subresourceRange.baseArrayLayer	= 0;
+		createInfo.subresourceRange.layerCount		= 1;
+
+		if ( VK_SUCCESS != vkCreateImageView( _device, &createInfo, nullptr, &_swapChainImageViews[ii] ) ) 
+		{
+			return false;
+		}
+	}
 
 	return true;
 }
