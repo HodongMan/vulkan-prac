@@ -1,8 +1,6 @@
 
 #pragma once
 
-#include "pch.h"
-
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
@@ -59,6 +57,9 @@ private:
 	bool						createSurface( void ) noexcept;
 	bool						createSwapChain( void ) noexcept;
 	bool						createImageViews( void ) noexcept;
+	bool						createGraphicsPipeline( void ) noexcept;
+	
+	VkShaderModule				createShaderModule( const std::vector<char>& code ) const noexcept;
 
 	void						runLoop( void ) const noexcept;
 	void						clean( void ) noexcept;
