@@ -57,6 +57,7 @@ private:
 	bool						createSurface( void ) noexcept;
 	bool						createSwapChain( void ) noexcept;
 	bool						createImageViews( void ) noexcept;
+	bool						createRenderPass( void ) noexcept;
 	bool						createGraphicsPipeline( void ) noexcept;
 	
 	VkShaderModule				createShaderModule( const std::vector<char>& code ) const noexcept;
@@ -79,4 +80,7 @@ private:
 	VkFormat					_swapChainImageFormat;
 	VkExtent2D					_swapChainExtent;
 	std::vector<VkImageView>	_swapChainImageViews;
+
+	VkRenderPass				_renderPass;
+	VkPipelineLayout			_pipelineLayout;
 };
