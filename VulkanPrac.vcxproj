@@ -139,12 +139,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="File.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="VKApplication.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="File.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="VKApplication.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="base.frag" />
+    <None Include="base.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

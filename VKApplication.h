@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "pch.h"
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
@@ -83,4 +85,6 @@ private:
 
 	VkRenderPass				_renderPass;
 	VkPipelineLayout			_pipelineLayout;
+	VkPipeline					_graphicsPipeline;
+
 };

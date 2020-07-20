@@ -477,8 +477,8 @@ bool VKApplication::createRenderPass( void ) noexcept
 
 bool VKApplication::createGraphicsPipeline( void ) noexcept
 {
-	auto vertShaderCode				= File::readFile( "shaders/vert.spv" );
-	auto fragShaderCode				= File::readFile( "shaders/frag.spv" );
+	auto vertShaderCode				= File::readFile( "./vert.spv" );
+	auto fragShaderCode				= File::readFile( "./frag.spv" );
 
 	VkShaderModule vertShaderModule = createShaderModule( vertShaderCode );
 	VkShaderModule fragShaderModule = createShaderModule( fragShaderCode );
@@ -566,6 +566,33 @@ bool VKApplication::createGraphicsPipeline( void ) noexcept
 		return false;
 	}
 
+	VkGraphicsPipelineCreateInfo pipelineInfo{};
+
+	pipelineInfo.sType								= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount							= 2;
+	pipelineInfo.pStages							= shaderStages;
+
+	pipelineInfo.pVertexInputState					= &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState				= &inputAssembly;
+	pipelineInfo.pViewportState						= &viewportState;
+	pipelineInfo.pRasterizationState				= &rasterizer;
+	pipelineInfo.pMultisampleState					= &multisampling;
+	pipelineInfo.pDepthStencilState					= nullptr; // Optional
+	pipelineInfo.pColorBlendState					= &colorBlending;
+	pipelineInfo.pDynamicState						= nullptr; // Optional
+
+	pipelineInfo.layout								= _pipelineLayout;
+
+	pipelineInfo.renderPass							= _renderPass;
+	pipelineInfo.subpass							= 0;
+
+	pipelineInfo.basePipelineHandle					= VK_NULL_HANDLE;
+
+	if ( VK_SUCCESS != vkCreateGraphicsPipelines( _device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphicsPipeline ) ) 
+	{
+		return false;
+	}
+
 	vkDestroyShaderModule( _device, fragShaderModule, nullptr );
 	vkDestroyShaderModule( _device, vertShaderModule, nullptr );
 
@@ -625,6 +652,9 @@ void VKApplication::clean( void ) noexcept
 	vkDestroyDevice( _device, nullptr );
 	vkDestroySurfaceKHR( _vkInstance, _surface, nullptr );
 	vkDestroyInstance( _vkInstance, nullptr );
+
+	vkDestroyPipeline( _device, _graphicsPipeline, nullptr );
+	vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
 
 	glfwDestroyWindow( _window );
 	glfwTerminate();
