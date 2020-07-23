@@ -67,6 +67,21 @@ bool VKApplication::initializeVKApplication( void ) noexcept
 		return false;
 	}
 
+	if ( false == createFramebuffers() )
+	{
+		return false;
+	}
+
+	if ( false == createCommandPool() )
+	{
+		return false;
+	}
+
+	if ( false == createCommandBuffers() )
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -599,6 +614,111 @@ bool VKApplication::createGraphicsPipeline( void ) noexcept
 	return true;
 }
 
+bool VKApplication::createFramebuffers( void ) noexcept
+{
+	const int swapChainImageViewSize = static_cast<int>( _swapChainImageViews.size() );
+
+	_swapChainFramebuffers.resize( swapChainImageViewSize );
+
+	for ( int ii = 0; ii < swapChainImageViewSize; ++ii )
+	{
+		VkImageView attachments[] = 
+		{
+			_swapChainImageViews[ii]
+		};
+
+		VkFramebufferCreateInfo framebufferInfo{};
+		framebufferInfo.sType						= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass					= _renderPass;
+		framebufferInfo.attachmentCount				= 1;
+		framebufferInfo.pAttachments				= attachments;
+		framebufferInfo.width						= _swapChainExtent.width;
+		framebufferInfo.height						= _swapChainExtent.height;
+		framebufferInfo.layers						= 1;
+
+		if ( VK_SUCCESS !=vkCreateFramebuffer( _device, &framebufferInfo, nullptr, &_swapChainFramebuffers[ii] ) ) 
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool VKApplication::createCommandPool( void ) noexcept
+{
+	QueueFamilyIndices queueFamilyIndices	= findQueueFamilies( _physicalDevice );
+
+	VkCommandPoolCreateInfo poolInfo{};
+	poolInfo.sType							= VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex				= queueFamilyIndices._graphicsFamily.value();
+	poolInfo.flags							= 0; // Optional
+
+	if ( VK_SUCCESS != vkCreateCommandPool( _device, &poolInfo, nullptr, &_commandPool ) )
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool VKApplication::createCommandBuffers( void ) noexcept
+{
+	_commandBuffers.resize( _swapChainFramebuffers.size() );
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType								= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool						= _commandPool;
+	allocInfo.level								= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount				= static_cast<uint32_t>( _commandBuffers.size() );
+
+	if ( VK_SUCCESS != vkAllocateCommandBuffers( _device, &allocInfo, _commandBuffers.data() ) ) 
+	{
+		return false;
+	}
+
+	const int commandBufferSize					= static_cast<int>( _commandBuffers.size() );
+
+	for ( int ii = 0; ii < commandBufferSize; ++ii )
+	{
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType							= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags							= 0; // Optional
+		beginInfo.pInheritanceInfo				= nullptr; // Optional
+
+		if ( VK_SUCCESS != vkBeginCommandBuffer( _commandBuffers[ii], &beginInfo ) ) 
+		{
+			return false;
+		}
+
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType					= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass				= _renderPass;
+		renderPassInfo.framebuffer				= _swapChainFramebuffers[ii];
+		renderPassInfo.renderArea.offset		= { 0, 0 };
+		renderPassInfo.renderArea.extent		= _swapChainExtent;
+
+		VkClearValue clearColor					= { 0.0f, 0.0f, 0.0f, 1.0f };
+		renderPassInfo.clearValueCount			= 1;
+		renderPassInfo.pClearValues				= &clearColor;
+
+		vkCmdBeginRenderPass( _commandBuffers[ii], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+
+		vkCmdBindPipeline( _commandBuffers[ii], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline );
+
+		vkCmdDraw( _commandBuffers[ii], 3, 1, 0, 0 );
+
+		vkCmdEndRenderPass( _commandBuffers[ii] );
+
+		if ( VK_SUCCESS != vkEndCommandBuffer( _commandBuffers[ii]) ) 
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 VkShaderModule VKApplication::createShaderModule( const std::vector<char>& code ) const noexcept
 {
 	VkShaderModuleCreateInfo createInfo{};
@@ -655,6 +775,13 @@ void VKApplication::clean( void ) noexcept
 
 	vkDestroyPipeline( _device, _graphicsPipeline, nullptr );
 	vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
+
+	for ( auto framebuffer : _swapChainFramebuffers )
+	{
+		vkDestroyFramebuffer( _device, framebuffer, nullptr );
+	}
+
+	vkDestroyCommandPool( _device, _commandPool, nullptr );
 
 	glfwDestroyWindow( _window );
 	glfwTerminate();

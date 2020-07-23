@@ -61,30 +61,38 @@ private:
 	bool						createImageViews( void ) noexcept;
 	bool						createRenderPass( void ) noexcept;
 	bool						createGraphicsPipeline( void ) noexcept;
-	
+	bool						createFramebuffers( void ) noexcept;
+	bool						createCommandPool( void ) noexcept;
+	bool						createCommandBuffers( void ) noexcept;
+
 	VkShaderModule				createShaderModule( const std::vector<char>& code ) const noexcept;
 
 	void						runLoop( void ) const noexcept;
 	void						clean( void ) noexcept;
 
-	GLFWwindow*					_window;
-	VkInstance					_vkInstance;
-	VkPhysicalDevice			_physicalDevice;
-	VkDevice					_device;
+	GLFWwindow*						_window;
+	VkInstance						_vkInstance;
+	VkPhysicalDevice				_physicalDevice;
+	VkDevice						_device;
 
-	VkQueue						_graphicsQueue;
-	VkQueue						_presentQueue;
+	VkQueue							_graphicsQueue;
+	VkQueue							_presentQueue;
 
-	VkSurfaceKHR				_surface;
+	VkSurfaceKHR					_surface;
 
-	VkSwapchainKHR				_swapchain;
-	std::vector<VkImage>		_swapChainImages;
-	VkFormat					_swapChainImageFormat;
-	VkExtent2D					_swapChainExtent;
-	std::vector<VkImageView>	_swapChainImageViews;
+	VkSwapchainKHR					_swapchain;
+	std::vector<VkImage>			_swapChainImages;
+	VkFormat						_swapChainImageFormat;
+	VkExtent2D						_swapChainExtent;
+	std::vector<VkImageView>		_swapChainImageViews;
 
-	VkRenderPass				_renderPass;
-	VkPipelineLayout			_pipelineLayout;
-	VkPipeline					_graphicsPipeline;
+	VkRenderPass					_renderPass;
+	VkPipelineLayout				_pipelineLayout;
+	VkPipeline						_graphicsPipeline;
+
+	std::vector<VkFramebuffer>		_swapChainFramebuffers;
+
+	VkCommandPool					_commandPool;
+	std::vector<VkCommandBuffer>	_commandBuffers;
 
 };

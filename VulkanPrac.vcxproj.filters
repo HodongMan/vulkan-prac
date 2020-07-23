@@ -37,10 +37,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="base.frag">
-      <Filter>Source</Filter>
+      <Filter>Shader</Filter>
     </None>
     <None Include="base.vert">
-      <Filter>Source</Filter>
+      <Filter>Shader</Filter>
     </None>
   </ItemGroup>
 </Project>
