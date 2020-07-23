@@ -64,10 +64,13 @@ private:
 	bool						createFramebuffers( void ) noexcept;
 	bool						createCommandPool( void ) noexcept;
 	bool						createCommandBuffers( void ) noexcept;
+	bool						createSyncObjects( void ) noexcept;
 
 	VkShaderModule				createShaderModule( const std::vector<char>& code ) const noexcept;
 
-	void						runLoop( void ) const noexcept;
+	void						runLoop( void ) noexcept;
+	void						drawFrame( void ) noexcept;
+	
 	void						clean( void ) noexcept;
 
 	GLFWwindow*						_window;
@@ -80,7 +83,7 @@ private:
 
 	VkSurfaceKHR					_surface;
 
-	VkSwapchainKHR					_swapchain;
+	VkSwapchainKHR					_swapChain;
 	std::vector<VkImage>			_swapChainImages;
 	VkFormat						_swapChainImageFormat;
 	VkExtent2D						_swapChainExtent;
@@ -95,4 +98,10 @@ private:
 	VkCommandPool					_commandPool;
 	std::vector<VkCommandBuffer>	_commandBuffers;
 
+	std::vector<VkSemaphore>		_imageAvailableSemaphores;
+	std::vector<VkSemaphore>		_renderFinishedSemaphores;
+	std::vector<VkFence>			_inFlightFences;
+	std::vector<VkFence>			_imagesInFlight;
+
+	size_t							_currentFrame;
 };

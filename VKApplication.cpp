@@ -3,11 +3,14 @@
 #include "VKApplication.h"
 #include "File.h"
 
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 
 VKApplication::VKApplication( void )
 	: _window{ nullptr }
 	, _vkInstance{ nullptr }
 	, _physicalDevice{ VK_NULL_HANDLE  }
+	, _currentFrame{ 0 }
 {
 
 }
@@ -78,6 +81,11 @@ bool VKApplication::initializeVKApplication( void ) noexcept
 	}
 
 	if ( false == createCommandBuffers() )
+	{
+		return false;
+	}
+
+	if ( false == createSyncObjects() )
 	{
 		return false;
 	}
@@ -404,14 +412,14 @@ bool VKApplication::createSwapChain( void ) noexcept
 	createInfo.oldSwapchain						= VK_NULL_HANDLE;
 
 
-	if ( VK_SUCCESS != vkCreateSwapchainKHR( _device, &createInfo, nullptr, &_swapchain ) ) 
+	if ( VK_SUCCESS != vkCreateSwapchainKHR( _device, &createInfo, nullptr, &_swapChain ) ) 
 	{
 		return false;
 	}
 
-	vkGetSwapchainImagesKHR( _device, _swapchain, &imageCount, nullptr );
+	vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, nullptr );
 	_swapChainImages.resize( imageCount );
-	vkGetSwapchainImagesKHR( _device, _swapchain, &imageCount, _swapChainImages.data() );
+	vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, _swapChainImages.data() );
 
 	_swapChainImageFormat						= surfaceFormat.format;
 	_swapChainExtent							= extent;
@@ -719,6 +727,33 @@ bool VKApplication::createCommandBuffers( void ) noexcept
 	return true;
 }
 
+bool VKApplication::createSyncObjects( void ) noexcept
+{
+	_imageAvailableSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
+	_renderFinishedSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
+	_inFlightFences.resize( MAX_FRAMES_IN_FLIGHT );
+	_imagesInFlight.resize( _swapChainImages.size(), VK_NULL_HANDLE );
+
+
+	VkSemaphoreCreateInfo semaphoreInfo{};
+	semaphoreInfo.sType								= VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	
+	VkFenceCreateInfo fenceInfo{};
+	fenceInfo.sType									= VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	for ( int ii = 0; ii < MAX_FRAMES_IN_FLIGHT; ++ii ) 
+	{
+		if ( ( VK_SUCCESS != vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_imageAvailableSemaphores[ii] ) ) ||
+			 ( VK_SUCCESS != vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_renderFinishedSemaphores[ii] ) ) || 
+			 ( VK_SUCCESS != vkCreateFence( _device, &fenceInfo, nullptr, &_inFlightFences[ii] ) ) )
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 VkShaderModule VKApplication::createShaderModule( const std::vector<char>& code ) const noexcept
 {
 	VkShaderModuleCreateInfo createInfo{};
@@ -748,13 +783,71 @@ void VKApplication::initializeWindow( void ) noexcept
 	_window = glfwCreateWindow( WIDTH, HEIGHT, "Vulkan", nullptr, nullptr );
 }
 
-void VKApplication::runLoop( void ) const noexcept
+void VKApplication::runLoop( void ) noexcept
 {
 	while ( !glfwWindowShouldClose( _window ) )
 	{
 		glfwPollEvents();
+		drawFrame();
 	}
+
+	vkDeviceWaitIdle( _device );
 }
+
+void VKApplication::drawFrame( void ) noexcept
+{
+	//vkWaitForFences( _device, 1, &_inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX );
+
+	uint32_t imageIndex = 0;
+	vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex );
+	
+	if ( VK_NULL_HANDLE !=  _imagesInFlight[imageIndex] ) 
+	{
+		vkWaitForFences( _device, 1, &_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX );
+	}
+
+	_imagesInFlight[imageIndex]				= _inFlightFences[_currentFrame];
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType						= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore waitSemaphores[]			= { _imageAvailableSemaphores[_currentFrame] };
+	VkPipelineStageFlags waitStages[]		= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount			= 1;
+	submitInfo.pWaitSemaphores				= waitSemaphores;
+	submitInfo.pWaitDstStageMask			= waitStages;
+
+	submitInfo.commandBufferCount			= 1;
+	submitInfo.pCommandBuffers				= &_commandBuffers[imageIndex];
+
+	VkSemaphore signalSemaphores[]			= { _renderFinishedSemaphores[_currentFrame] };
+	submitInfo.signalSemaphoreCount			= 1;
+	submitInfo.pSignalSemaphores			= signalSemaphores;
+
+	vkResetFences( _device, 1, &_inFlightFences[_currentFrame] );
+
+	if ( VK_SUCCESS != vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame] ) ) 
+	{
+		return;
+	}
+
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType						= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+	presentInfo.waitSemaphoreCount			= 1;
+	presentInfo.pWaitSemaphores				= signalSemaphores;
+
+	VkSwapchainKHR swapChains[]				= { _swapChain };
+	presentInfo.swapchainCount				= 1;
+	presentInfo.pSwapchains					= swapChains;
+
+	presentInfo.pImageIndices				= &imageIndex;
+
+	vkQueuePresentKHR( _presentQueue, &presentInfo );
+
+	_currentFrame = ( _currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
 
 void VKApplication::clean( void ) noexcept
 {
@@ -766,7 +859,7 @@ void VKApplication::clean( void ) noexcept
 		vkDestroyImageView( _device, imageView, nullptr );
 	}
 
-	vkDestroySwapchainKHR( _device, _swapchain, nullptr );
+	vkDestroySwapchainKHR( _device, _swapChain, nullptr );
 	vkDeviceWaitIdle( _device );
 
 	vkDestroyDevice( _device, nullptr );
@@ -782,6 +875,13 @@ void VKApplication::clean( void ) noexcept
 	}
 
 	vkDestroyCommandPool( _device, _commandPool, nullptr );
+	
+	for ( int ii = 0; ii < MAX_FRAMES_IN_FLIGHT; ++ii ) 
+	{
+        vkDestroySemaphore( _device, _renderFinishedSemaphores[ii], nullptr );
+        vkDestroySemaphore( _device, _imageAvailableSemaphores[ii], nullptr );
+		vkDestroyFence( _device, _inFlightFences[ii], nullptr );
+    }
 
 	glfwDestroyWindow( _window );
 	glfwTerminate();
