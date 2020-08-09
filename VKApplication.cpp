@@ -302,10 +302,19 @@ VkExtent2D VKApplication::chooseSwapExtent(const VkSurfaceCapabilitiesKHR & capa
 		return capabilities.currentExtent;
 	}
 
-	VkExtent2D actualExtent = { WIDTH, HEIGHT };
+	int width				= 0;
+	int height				= 0;
 
-	actualExtent.width = std::max( capabilities.minImageExtent.width, std::min( capabilities.maxImageExtent.width, actualExtent.width ) );
-	actualExtent.height = std::max( capabilities.minImageExtent.height, std::min( capabilities.maxImageExtent.height, actualExtent.height ) );
+	glfwGetFramebufferSize( _window, &width, &height );
+
+	VkExtent2D actualExtent = 
+	{
+		static_cast<uint32_t>( width ),
+		static_cast<uint32_t>( height )
+	};
+
+	actualExtent.width		= std::max( capabilities.minImageExtent.width, std::min( capabilities.maxImageExtent.width, actualExtent.width ) );
+	actualExtent.height		= std::max( capabilities.minImageExtent.height, std::min( capabilities.maxImageExtent.height, actualExtent.height ) );
 
 	return actualExtent;
 }
@@ -423,6 +432,29 @@ bool VKApplication::createSwapChain( void ) noexcept
 
 	_swapChainImageFormat						= surfaceFormat.format;
 	_swapChainExtent							= extent;
+
+	return true;
+}
+
+bool VKApplication::recreateSwapChain( void ) noexcept
+{
+	int width		= 0;
+	int height		= 0;
+	glfwGetFramebufferSize( _window, &width, &height );
+	while ( ( 0 == width ) || ( 0 == height ) ) 
+	{
+		glfwGetFramebufferSize( _window, &width, &height );
+		glfwWaitEvents();
+	}
+
+	vkDeviceWaitIdle( _device );
+
+	createSwapChain();
+	createImageViews();
+	createRenderPass();
+	createGraphicsPipeline();
+	createFramebuffers();
+	createCommandBuffers();
 
 	return true;
 }
@@ -781,6 +813,8 @@ void VKApplication::initializeWindow( void ) noexcept
 	glfwWindowHint( GLFW_RESIZABLE, GLFW_FALSE );
 
 	_window = glfwCreateWindow( WIDTH, HEIGHT, "Vulkan", nullptr, nullptr );
+	glfwSetWindowUserPointer( _window, this );
+	glfwSetFramebufferSizeCallback( _window, framebufferResizeCallback );
 }
 
 void VKApplication::runLoop( void ) noexcept
@@ -799,8 +833,19 @@ void VKApplication::drawFrame( void ) noexcept
 	//vkWaitForFences( _device, 1, &_inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX );
 
 	uint32_t imageIndex = 0;
-	vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex );
-	
+	VkResult result = vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex );
+	if ( VK_ERROR_OUT_OF_DATE_KHR == result )
+	{
+		recreateSwapChain();
+		return;
+	}
+	else if ( VK_SUCCESS != result && VK_SUBOPTIMAL_KHR != result )
+	{
+		return;
+	}
+
+
+
 	if ( VK_NULL_HANDLE !=  _imagesInFlight[imageIndex] ) 
 	{
 		vkWaitForFences( _device, 1, &_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX );
@@ -843,7 +888,18 @@ void VKApplication::drawFrame( void ) noexcept
 
 	presentInfo.pImageIndices				= &imageIndex;
 
-	vkQueuePresentKHR( _presentQueue, &presentInfo );
+	result = vkQueuePresentKHR( _presentQueue, &presentInfo );
+	if ( ( VK_ERROR_OUT_OF_DATE_KHR == result ) || 
+		 ( VK_SUBOPTIMAL_KHR == result ) || 
+		 ( true == _framebufferResized ) ) 
+	{
+		_framebufferResized = false;
+		recreateSwapChain();
+	}
+	else if ( VK_SUCCESS != result ) 
+	{
+		return;
+	}
 
 	_currentFrame = ( _currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
@@ -851,28 +907,7 @@ void VKApplication::drawFrame( void ) noexcept
 
 void VKApplication::clean( void ) noexcept
 {
-	vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
-	vkDestroyRenderPass( _device, _renderPass, nullptr );
-
-	for ( auto imageView : _swapChainImageViews)
-	{
-		vkDestroyImageView( _device, imageView, nullptr );
-	}
-
-	vkDestroySwapchainKHR( _device, _swapChain, nullptr );
-	vkDeviceWaitIdle( _device );
-
-	vkDestroyDevice( _device, nullptr );
-	vkDestroySurfaceKHR( _vkInstance, _surface, nullptr );
-	vkDestroyInstance( _vkInstance, nullptr );
-
-	vkDestroyPipeline( _device, _graphicsPipeline, nullptr );
-	vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
-
-	for ( auto framebuffer : _swapChainFramebuffers )
-	{
-		vkDestroyFramebuffer( _device, framebuffer, nullptr );
-	}
+	cleanupSwapChain();
 
 	vkDestroyCommandPool( _device, _commandPool, nullptr );
 	
@@ -883,6 +918,40 @@ void VKApplication::clean( void ) noexcept
 		vkDestroyFence( _device, _inFlightFences[ii], nullptr );
     }
 
+	vkDestroyDevice(_device, nullptr);
+	vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
+	vkDestroyInstance(_vkInstance, nullptr);
+
 	glfwDestroyWindow( _window );
 	glfwTerminate();
+}
+
+void VKApplication::cleanupSwapChain( void ) noexcept
+{
+	const int swapChainFramebuffersSize = static_cast<int>( _swapChainFramebuffers.size() );
+	const int swpaChainImageViewsSize	= static_cast<int>( _swapChainImageViews.size() );
+
+	for ( int ii = 0; ii < swapChainFramebuffersSize; ++ii )
+	{
+		vkDestroyFramebuffer(_device, _swapChainFramebuffers[ii], nullptr );
+	}
+
+	vkFreeCommandBuffers( _device, _commandPool, static_cast<uint32_t>( _commandBuffers.size()), _commandBuffers.data() );
+	vkDestroyPipeline( _device, _graphicsPipeline, nullptr );
+	vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
+	vkDestroyRenderPass( _device, _renderPass, nullptr );
+
+	for ( int ii = 0; ii < swpaChainImageViewsSize; ++ii )
+	{
+		vkDestroyImageView( _device, _swapChainImageViews[ii], nullptr );
+	}
+
+	vkDestroySwapchainKHR( _device, _swapChain, nullptr );
+}
+
+void VKApplication::framebufferResizeCallback( GLFWwindow * window, int width, int height ) noexcept
+{
+	VKApplication* app = reinterpret_cast<VKApplication*>( glfwGetWindowUserPointer( window ) );
+	
+	app->_framebufferResized = true;
 }

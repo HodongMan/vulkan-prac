@@ -58,6 +58,7 @@ private:
 	bool						createLogicalDevice( void ) noexcept;
 	bool						createSurface( void ) noexcept;
 	bool						createSwapChain( void ) noexcept;
+	bool						recreateSwapChain( void ) noexcept;
 	bool						createImageViews( void ) noexcept;
 	bool						createRenderPass( void ) noexcept;
 	bool						createGraphicsPipeline( void ) noexcept;
@@ -72,6 +73,9 @@ private:
 	void						drawFrame( void ) noexcept;
 	
 	void						clean( void ) noexcept;
+	void						cleanupSwapChain( void ) noexcept;
+
+	static void					framebufferResizeCallback( GLFWwindow* window, int width, int height ) noexcept;
 
 	GLFWwindow*						_window;
 	VkInstance						_vkInstance;
@@ -104,4 +108,5 @@ private:
 	std::vector<VkFence>			_imagesInFlight;
 
 	size_t							_currentFrame;
+	bool							_framebufferResized;
 };
