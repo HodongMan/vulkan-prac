@@ -141,11 +141,13 @@
   <ItemGroup>
     <ClCompile Include="File.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Vertex.cpp" />
     <ClCompile Include="VKApplication.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="File.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Vertex.h" />
     <ClInclude Include="VKApplication.h" />
   </ItemGroup>
   <ItemGroup>

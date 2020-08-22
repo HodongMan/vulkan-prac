@@ -2,6 +2,7 @@
 
 #include "VKApplication.h"
 #include "File.h"
+#include "Vertex.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -554,8 +555,14 @@ bool VKApplication::createGraphicsPipeline( void ) noexcept
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType							= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount	= 0;
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
+	
+	VkVertexInputBindingDescription bindingDescription						= Vertex::getBindingDescription();
+	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions	= Vertex::getAttributeDescriptions();
+	
+	vertexInputInfo.vertexBindingDescriptionCount	= 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions		= &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions	= attributeDescriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 	inputAssembly.sType								= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

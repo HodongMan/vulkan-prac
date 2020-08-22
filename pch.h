@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -11,5 +12,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdint>
+#include <array>
 #include <optional>
 #include <set>
+#include <stddef.h>

@@ -23,6 +23,9 @@
     <ClCompile Include="File.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Vertex.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -32,6 +35,9 @@
       <Filter>Header</Filter>
     </ClInclude>
     <ClInclude Include="File.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Vertex.h">
       <Filter>Header</Filter>
     </ClInclude>
   </ItemGroup>
