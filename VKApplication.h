@@ -54,6 +54,7 @@ private:
 	VkSurfaceFormatKHR			chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR>& availableFormats ) const noexcept;
 	VkPresentModeKHR			chooseSwapPresentMode( const std::vector<VkPresentModeKHR>& availablePresentModes ) const noexcept;
 	VkExtent2D					chooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities ) const noexcept;
+	uint32_t					findMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties ) const noexcept;
 
 	bool						createLogicalDevice( void ) noexcept;
 	bool						createSurface( void ) noexcept;
@@ -66,6 +67,8 @@ private:
 	bool						createCommandPool( void ) noexcept;
 	bool						createCommandBuffers( void ) noexcept;
 	bool						createSyncObjects( void ) noexcept;
+
+	bool						createVertexBuffer( void ) noexcept;
 
 	VkShaderModule				createShaderModule( const std::vector<char>& code ) const noexcept;
 
@@ -109,4 +112,7 @@ private:
 
 	size_t							_currentFrame;
 	bool							_framebufferResized;
+
+	VkBuffer						_vertexBuffer;
+	VkDeviceMemory					_vertexBufferMemory;
 };

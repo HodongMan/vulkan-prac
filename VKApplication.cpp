@@ -81,6 +81,11 @@ bool VKApplication::initializeVKApplication( void ) noexcept
 		return false;
 	}
 
+	if ( false == createVertexBuffer() )
+	{
+		return false;
+	}
+
 	if ( false == createCommandBuffers() )
 	{
 		return false;
@@ -318,6 +323,23 @@ VkExtent2D VKApplication::chooseSwapExtent(const VkSurfaceCapabilitiesKHR & capa
 	actualExtent.height		= std::max( capabilities.minImageExtent.height, std::min( capabilities.maxImageExtent.height, actualExtent.height ) );
 
 	return actualExtent;
+}
+
+uint32_t VKApplication::findMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties ) const noexcept
+{
+	VkPhysicalDeviceMemoryProperties memoryProperties;
+	vkGetPhysicalDeviceMemoryProperties( _physicalDevice, &memoryProperties );
+
+	for ( uint32_t ii = 0; ii < memoryProperties.memoryTypeCount; ++ii ) 
+	{
+		if ( ( typeFilter & ( 1 << ii ) ) && 
+			 ( memoryProperties.memoryTypes[ii].propertyFlags & properties ) == properties ) 
+		{
+			return ii;
+		}
+	}
+
+	return -1;
 }
 
 bool VKApplication::createLogicalDevice( void ) noexcept
@@ -753,7 +775,11 @@ bool VKApplication::createCommandBuffers( void ) noexcept
 
 		vkCmdBindPipeline( _commandBuffers[ii], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline );
 
-		vkCmdDraw( _commandBuffers[ii], 3, 1, 0, 0 );
+		VkBuffer vertexBuffers[] = { _vertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers( _commandBuffers[ii], 0, 1, vertexBuffers, offsets );
+
+		vkCmdDraw( _commandBuffers[ii], static_cast<uint32_t>( vertices.size() ), 1, 0, 0 );
 
 		vkCmdEndRenderPass( _commandBuffers[ii] );
 
@@ -789,6 +815,43 @@ bool VKApplication::createSyncObjects( void ) noexcept
 			return false;
 		}
 	}
+
+	return true;
+}
+
+bool VKApplication::createVertexBuffer( void ) noexcept
+{
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType			= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size				= sizeof( vertices[0] ) * vertices.size();
+	bufferInfo.usage			= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode		= VK_SHARING_MODE_EXCLUSIVE;
+
+	if ( VK_SUCCESS != vkCreateBuffer( _device, &bufferInfo, nullptr, &_vertexBuffer ) ) 
+	{
+		return false;
+	}
+
+	VkMemoryRequirements memoryRequirements;
+	vkGetBufferMemoryRequirements( _device, _vertexBuffer, &memoryRequirements );
+	
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType				= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize	= memoryRequirements.size;
+	allocInfo.memoryTypeIndex	= findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
+
+	if ( VK_SUCCESS != vkAllocateMemory( _device, &allocInfo, nullptr, &_vertexBufferMemory ) ) 
+	{
+		return false;
+	}
+
+	vkBindBufferMemory( _device, _vertexBuffer, _vertexBufferMemory, 0 );
+
+	void* data = nullptr;
+	
+	vkMapMemory( _device, _vertexBufferMemory, 0, bufferInfo.size, 0, &data );
+	memcpy( data, vertices.data(), (size_t)bufferInfo.size );
+	vkUnmapMemory( _device, _vertexBufferMemory);
 
 	return true;
 }
@@ -925,9 +988,12 @@ void VKApplication::clean( void ) noexcept
 		vkDestroyFence( _device, _inFlightFences[ii], nullptr );
     }
 
-	vkDestroyDevice(_device, nullptr);
-	vkDestroySurfaceKHR(_vkInstance, _surface, nullptr);
-	vkDestroyInstance(_vkInstance, nullptr);
+	vkDestroyBuffer( _device, _vertexBuffer, nullptr );
+    vkFreeMemory( _device, _vertexBufferMemory, nullptr );
+
+	vkDestroyDevice( _device, nullptr );
+	vkDestroySurfaceKHR( _vkInstance, _surface, nullptr );
+	vkDestroyInstance( _vkInstance, nullptr );
 
 	glfwDestroyWindow( _window );
 	glfwTerminate();
