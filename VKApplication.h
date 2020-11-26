@@ -71,6 +71,10 @@ private:
 	bool						createVertexBuffer( void ) noexcept;
 
 	VkShaderModule				createShaderModule( const std::vector<char>& code ) const noexcept;
+	
+	bool						createBuffer( const VkDeviceSize size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory ) noexcept;
+
+	void						copyBuffer( VkBuffer srcBuffer, VkBuffer dstBuffer, const VkDeviceSize size ) noexcept;
 
 	void						runLoop( void ) noexcept;
 	void						drawFrame( void ) noexcept;
