@@ -69,6 +69,7 @@ private:
 	bool						createSyncObjects( void ) noexcept;
 
 	bool						createVertexBuffer( void ) noexcept;
+	bool						createIndexBuffer( void ) noexcept;
 
 	VkShaderModule				createShaderModule( const std::vector<char>& code ) const noexcept;
 	
@@ -119,4 +120,7 @@ private:
 
 	VkBuffer						_vertexBuffer;
 	VkDeviceMemory					_vertexBufferMemory;
+
+	VkBuffer						_indexBuffer;
+	VkDeviceMemory					_indexBufferMemory;
 };

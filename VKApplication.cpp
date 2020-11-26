@@ -86,6 +86,11 @@ bool VKApplication::initializeVKApplication( void ) noexcept
 		return false;
 	}
 
+	if ( false == createIndexBuffer() )
+	{
+		return false;
+	}
+
 	if ( false == createCommandBuffers() )
 	{
 		return false;
@@ -223,7 +228,6 @@ QueueFamilyIndices VKApplication::findQueueFamilies( const VkPhysicalDevice devi
 		{
 			indices._presentFamily = ii;
 		}
-
 
         if ( true == indices.isComplete() )
 		{
@@ -779,7 +783,9 @@ bool VKApplication::createCommandBuffers( void ) noexcept
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers( _commandBuffers[ii], 0, 1, vertexBuffers, offsets );
 
-		vkCmdDraw( _commandBuffers[ii], static_cast<uint32_t>( vertices.size() ), 1, 0, 0 );
+		vkCmdBindIndexBuffer( _commandBuffers[ii], _indexBuffer, 0, VK_INDEX_TYPE_UINT16 );
+
+		vkCmdDrawIndexed( _commandBuffers[ii], static_cast<uint32_t>( indices.size() ), 1, 0, 0, 0 );
 
 		vkCmdEndRenderPass( _commandBuffers[ii] );
 
@@ -836,6 +842,30 @@ bool VKApplication::createVertexBuffer( void ) noexcept
 	createBuffer( bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vertexBuffer, _vertexBufferMemory );
 
 	copyBuffer( stagingBuffer, _vertexBuffer, bufferSize );
+
+	vkDestroyBuffer( _device, stagingBuffer, nullptr );
+	vkFreeMemory( _device, stagingBufferMemory, nullptr );
+
+	return true;
+}
+
+bool VKApplication::createIndexBuffer( void ) noexcept
+{
+	const VkDeviceSize bufferSize = static_cast<VkDeviceSize>( sizeof( indices[0] ) * indices.size() );
+	
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	
+	createBuffer( bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory );
+
+	void* data = nullptr;
+	vkMapMemory( _device, stagingBufferMemory, 0, bufferSize, 0, &data );
+	memcpy( data, indices.data(), static_cast<size_t>( bufferSize ) );
+	vkUnmapMemory( _device, stagingBufferMemory );
+
+	createBuffer( bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _indexBuffer, _indexBufferMemory );
+
+	copyBuffer( stagingBuffer, _indexBuffer, bufferSize );
 
 	vkDestroyBuffer( _device, stagingBuffer, nullptr );
 	vkFreeMemory( _device, stagingBufferMemory, nullptr );
@@ -1041,6 +1071,9 @@ void VKApplication::clean( void ) noexcept
         vkDestroySemaphore( _device, _imageAvailableSemaphores[ii], nullptr );
 		vkDestroyFence( _device, _inFlightFences[ii], nullptr );
     }
+
+	vkDestroyBuffer( _device, _indexBuffer, nullptr );
+	vkFreeMemory( _device, _indexBufferMemory, nullptr );
 
 	vkDestroyBuffer( _device, _vertexBuffer, nullptr );
     vkFreeMemory( _device, _vertexBufferMemory, nullptr );
